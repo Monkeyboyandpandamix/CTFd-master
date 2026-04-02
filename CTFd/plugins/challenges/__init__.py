@@ -27,6 +27,7 @@ from CTFd.plugins.challenges.logic import (
     challenge_attempt_any,
     challenge_attempt_team,
 )
+from CTFd.utils.challenge_update_payload import apply_challenge_scalar_updates
 from CTFd.utils.uploads import delete_file
 from CTFd.utils.user import get_ip
 
@@ -137,15 +138,7 @@ class BaseChallenge(object):
         :return:
         """
         data = request.form or request.get_json()
-        for attr, value in data.items():
-            # We need to set these to floats so that the next operations don't operate on strings
-            if attr in ("initial", "minimum", "decay"):
-                try:
-                    value = float(value)
-                except (ValueError, TypeError):
-                    db.session.rollback()
-                    raise ChallengeUpdateException(f"Invalid input for '{attr}'")
-            setattr(challenge, attr, value)
+        apply_challenge_scalar_updates(challenge, data)
 
         for attr in ("initial", "minimum", "decay"):
             if (

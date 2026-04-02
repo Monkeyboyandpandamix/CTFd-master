@@ -604,6 +604,11 @@ def main():
     parser.add_argument("--ctf-archive-root")
     parser.add_argument("--pwncollege-root")
     parser.add_argument("--awesome-ctf-root")
+    parser.add_argument(
+        "--include-catalog-sources",
+        action="store_true",
+        help="Also import non-runtime catalog/reference entries from archive/reference repos.",
+    )
     args = parser.parse_args()
 
     rows = []
@@ -611,11 +616,11 @@ def main():
     rows.extend(load_csv_rows(pathlib.Path(args.wrongsecrets_csv), "wrongsecrets"))
     pico, ssh_password = pico_rows()
     rows.extend(pico)
-    if args.ctf_archive_root:
+    if args.include_catalog_sources and args.ctf_archive_root:
         rows.extend(ctf_archive_rows(pathlib.Path(args.ctf_archive_root)))
-    if args.pwncollege_root:
+    if args.include_catalog_sources and args.pwncollege_root:
         rows.extend(pwncollege_rows(pathlib.Path(args.pwncollege_root)))
-    if args.awesome_ctf_root:
+    if args.include_catalog_sources and args.awesome_ctf_root:
         rows.extend(awesome_ctf_rows(pathlib.Path(args.awesome_ctf_root)))
 
     output_csv = pathlib.Path(args.output_csv)

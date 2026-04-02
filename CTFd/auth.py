@@ -398,6 +398,7 @@ def register():
                     db.session.add(entry)
                 db.session.commit()
 
+                session.regenerate()
                 login_user(user)
 
                 if request.args.get("next") and validators.is_safe_url(
@@ -459,6 +460,7 @@ def login():
             ) and password == preset_admin_password:
                 admin = generate_preset_admin()
                 if admin:
+                    session.regenerate()
                     login_user(user=admin)
                     return redirect(url_for("challenges.listing"))
                 else:

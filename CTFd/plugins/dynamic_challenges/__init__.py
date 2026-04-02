@@ -1,14 +1,12 @@
 from flask import Blueprint
 
-from CTFd.exceptions.challenges import (
-    ChallengeCreateException,
-    ChallengeUpdateException,
-)
+from CTFd.exceptions.challenges import ChallengeCreateException
 from CTFd.models import Challenges, db
 from CTFd.plugins import register_plugin_assets_directory
 from CTFd.plugins.challenges import CHALLENGE_CLASSES, BaseChallenge
 from CTFd.plugins.dynamic_challenges.decay import DECAY_FUNCTIONS, logarithmic
 from CTFd.plugins.migrations import upgrade
+from CTFd.utils.challenge_update_payload import apply_challenge_scalar_updates
 
 
 class DynamicChallenge(Challenges):
@@ -127,15 +125,7 @@ class DynamicValueChallenge(BaseChallenge):
         :return:
         """
         data = request.form or request.get_json()
-
-        for attr, value in data.items():
-            # We need to set these to floats so that the next operations don't operate on strings
-            if attr in ("initial", "minimum", "decay"):
-                try:
-                    value = float(value)
-                except (ValueError, TypeError):
-                    raise ChallengeUpdateException(f"Invalid input for '{attr}'")
-            setattr(challenge, attr, value)
+        apply_challenge_scalar_updates(challenge, data)
 
         return DynamicValueChallenge.calculate_value(challenge)
 

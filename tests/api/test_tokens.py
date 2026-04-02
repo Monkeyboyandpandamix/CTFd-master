@@ -80,6 +80,24 @@ def test_user_token_access():
     destroy_ctfd(app)
 
 
+def test_user_token_api_without_json_content_type():
+    """Bearer tokens must work for /api/v1 regardless of Content-Type."""
+    app = create_ctfd()
+    with app.app_context():
+        user = gen_user(app.db, name="tokuser", email="tokuser@examplectf.com")
+        token = generate_user_token(user, expiration=None)
+        with app.test_client() as client:
+            headers = {"Authorization": "token " + token.value}
+            r = client.get(
+                "/api/v1/users/me",
+                headers=headers,
+                content_type="application/x-www-form-urlencoded",
+            )
+            assert r.status_code == 200
+            assert r.get_json()["data"]["name"] == "tokuser"
+    destroy_ctfd(app)
+
+
 def test_token_api_file_upload():
     """Test that tokens can upload files with multipart/form-data content type"""
     app = create_ctfd()

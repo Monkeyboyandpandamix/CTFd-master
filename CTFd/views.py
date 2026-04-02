@@ -252,6 +252,7 @@ def setup():
             except IntegrityError:
                 db.session.rollback()
 
+            session.regenerate()
             login_user(admin)
 
             db.session.close()
@@ -480,49 +481,38 @@ def files(path):
         abort(404)
 
 
+def _send_theme_static(theme, path):
+    """
+    Resolve a theme static path against the requested theme and fallbacks
+    (configured theme, default, admin).
+    """
+    for cand_path in (
+        safe_join(app.root_path, "themes", cand_theme, "static", path)
+        for cand_theme in (theme, *config.ctf_theme_candidates())
+    ):
+        if cand_path is None:
+            abort(404)
+        if os.path.isfile(cand_path):
+            return send_file(cand_path, max_age=3600)
+    abort(404)
+
+
 @views.route("/themes/<theme>/static/<path:path>")
 def themes(theme, path):
     """
-    General static file handler
-    :param theme:
-    :param path:
-    :return:
+    General static file handler. ``url_for('views.themes', ...)`` receives
+    ``url_defaults`` that append ``.min`` / ``.dev`` for JS/CSS when needed.
     """
-    for cand_path in (
-        safe_join(app.root_path, "themes", cand_theme, "static", path)
-        # The `theme` value passed in may not be the configured one, e.g. for
-        # admin pages, so we check that first
-        for cand_theme in (theme, *config.ctf_theme_candidates())
-    ):
-        # Handle werkzeug behavior of returning None on malicious paths
-        if cand_path is None:
-            abort(404)
-        if os.path.isfile(cand_path):
-            return send_file(cand_path, max_age=3600)
-    abort(404)
+    return _send_theme_static(theme, path)
 
 
-@views.route("/themes/<theme>/static/<path:path>")
-def themes_beta(theme, path):
-    """
-    This is a copy of the above themes route used to avoid
-    the current appending of .dev and .min for theme assets.
-
-    In CTFd 4.0 this url_for behavior and this themes_beta
-    route will be removed.
-    """
-    for cand_path in (
-        safe_join(app.root_path, "themes", cand_theme, "static", path)
-        # The `theme` value passed in may not be the configured one, e.g. for
-        # admin pages, so we check that first
-        for cand_theme in (theme, *config.ctf_theme_candidates())
-    ):
-        # Handle werkzeug behavior of returning None on malicious paths
-        if cand_path is None:
-            abort(404)
-        if os.path.isfile(cand_path):
-            return send_file(cand_path, max_age=3600)
-    abort(404)
+# Second endpoint, same handler: ``url_for('views.themes_beta', ...)`` skips
+# those rewrites (manifest-hashed assets). See ``env_asset_url_default``.
+views.add_url_rule(
+    "/themes/<theme>/static/<path:path>",
+    view_func=themes,
+    endpoint="themes_beta",
+)
 
 
 @views.route("/healthcheck")

@@ -87,7 +87,16 @@ def challenge_names_from_csv(path):
 
 def clear_integrated_challenges(path):
     names = challenge_names_from_csv(path)
-    challenge_ids = [chal.id for chal in Challenges.query.filter(Challenges.name.in_(names)).all()]
+    catalog_prefixes = (
+        "CTF Archive:",
+        "pwn.college:",
+        "Awesome CTF Reference:",
+    )
+    challenge_ids = [
+        chal.id
+        for chal in Challenges.query.all()
+        if chal.name in names or any(chal.name.startswith(prefix) for prefix in catalog_prefixes)
+    ]
     if not challenge_ids:
         return
     Tags.query.filter(Tags.challenge_id.in_(challenge_ids)).delete(synchronize_session=False)
@@ -221,10 +230,10 @@ This CTFd instance was reviewed and seeded from the requested repositories with 
 
 | Repository | Review | Imported Into CTFd |
 | --- | --- | --- |
-| `apsdehal/awesome-ctf` | Curated reference list, not a native challenge pack | Imported as hidden reference catalog entries plus reviewed on this page |
-| `pwncollege/ctf-archive` | Archive/source repository, not a drop-in CTFd export | Imported as hidden archive catalog entries plus reviewed on this page |
-| `pwncollege/challenges` | Custom pwnshop + Docker monorepo with templating and encrypted private material | Imported as hidden structured catalog entries plus reviewed on this page |
-| `picoCTF/start-problem-dev` | Challenge authoring examples | Two Docker-backed example challenges imported |
+| `apsdehal/awesome-ctf` | Curated reference list, not a native challenge pack | Reviewed on this page only, excluded from the playable challenge board by default |
+| `pwncollege/ctf-archive` | Archive/source repository, not a drop-in CTFd export | Reviewed on this page only, excluded from the playable challenge board by default |
+| `pwncollege/challenges` | Custom pwnshop + Docker monorepo with templating and encrypted private material | Reviewed on this page only, excluded from the playable challenge board by default |
+| `picoCTF/start-problem-dev` | Challenge authoring examples | Seven runtime-backed example challenges imported |
 | `OWASP/wrongsecrets` | Dockerized training target with CTF export support | Imported via generated CTFd CSV |
 | `juice-shop/juice-shop` | Dockerized training target | Imported via generated CTFd CSV |
 | `juice-shop/juice-shop-ctf` | CTFd CSV generator used by the integration | Used as the import bridge |
@@ -241,9 +250,10 @@ This CTFd instance was reviewed and seeded from the requested repositories with 
 
 ## Notes
 
-- `awesome-ctf`, `ctf-archive`, and `pwncollege/challenges` are not native drop-in CTFd exports, so they were imported as hidden catalog entries with English descriptions and admin curation notes instead of being treated as fully wired live runtimes.
+- `awesome-ctf`, `ctf-archive`, and `pwncollege/challenges` are not native drop-in CTFd exports, so they are excluded from the playable challenge board by default and kept on this review page for admin curation.
 - `wrongsecrets` and `juice-shop` were integrated the correct upstream way: expose the app, generate CTFd challenge CSV, then load the CSV into CTFd.
 - The picoCTF example problems were normalized into standard CTFd rows with matching runtime endpoints and flags.
+- The live challenge board is intended to contain only runtime-backed challenges that users can actually solve against a working local service, download, SSH target, or netcat target.
 
 {"".join(review_sections)}
 """

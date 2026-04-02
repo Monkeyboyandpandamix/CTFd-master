@@ -328,18 +328,23 @@ def init_request_processors(app):
 
                 return redirect(url_for("auth.reset_password", data=reset_token))
 
+    def _should_resolve_user_token_from_authorization_header():
+        """
+        Resolve ``Authorization`` into a logged-in user for API traffic regardless
+        of Content-Type (JSON, form, empty body, etc.). Non-API routes are
+        unchanged so browser session + CSRF semantics stay intact.
+        """
+        if request.blueprint == "api":
+            return True
+        path = request.path or ""
+        if "/api/v1" in path:
+            return True
+        return False
+
     @app.before_request
     def tokens():
         token = request.headers.get("Authorization")
-        if token and (
-            request.mimetype == "application/json"
-            # Specially allow multipart/form-data for file uploads
-            or (
-                request.endpoint == "api.files_files_list"
-                and request.method == "POST"
-                and request.mimetype == "multipart/form-data"
-            )
-        ):
+        if token and _should_resolve_user_token_from_authorization_header():
             try:
                 token_type, token = token.split(" ", 1)
                 user = lookup_user_token(token)
@@ -356,10 +361,12 @@ def init_request_processors(app):
     def csrf():
         # TODO: CTFd 4.0 Consider reorganizing this function to only run on non safe methods
         # Early exit: no CSRF for functions explicitly marked as bypassing CSRF
-        try:
-            func = app.view_functions[request.endpoint]
-        except KeyError:
-            abort(404)
+        endpoint = request.endpoint
+        if endpoint is None:
+            return
+        func = app.view_functions.get(endpoint)
+        if func is None:
+            return
         if hasattr(func, "_bypass_csrf"):
             return
         # No CSRF for theme files using safe methods

@@ -44,14 +44,23 @@ def during_ctf_time_only(f):
 
 
 def require_authentication_if_config(config_key):
+    """
+    When ``get_config(config_key)`` is truthy, require a logged-in user.
+    Unauthenticated users are sent to login (HTML) or receive 403 (JSON/API).
+    """
+
     def _require_authentication_if_config(f):
         @functools.wraps(f)
         def __require_authentication_if_config(*args, **kwargs):
-            value = get_config(config_key)
-            if value and current_user.authed():
-                return redirect(url_for("auth.login", next=request.full_path))
-            else:
+            if not get_config(config_key):
                 return f(*args, **kwargs)
+            if current_user.authed():
+                return f(*args, **kwargs)
+            if request.content_type == "application/json" or (
+                request.accept_mimetypes.best == "application/json"
+            ):
+                abort(403)
+            return redirect(url_for("auth.login", next=request.full_path))
 
         return __require_authentication_if_config
 
@@ -149,9 +158,16 @@ def admins_only(f):
 
 
 def require_team(f):
+    """
+    In teams mode, require the current user to belong to a team.
+    Admins may access the route without a team (e.g. management / preview).
+    """
+
     @functools.wraps(f)
     def require_team_wrapper(*args, **kwargs):
         if is_teams_mode():
+            if is_admin():
+                return f(*args, **kwargs)
             team = get_current_team()
             if team is None:
                 if request.content_type == "application/json":
@@ -163,6 +179,27 @@ def require_team(f):
             abort(404)
 
     return require_team_wrapper
+
+
+def require_team_if_authed_api(f):
+    """
+    For JSON/API flows: if the user is authenticated and the event is in teams
+    mode, require a team unless they are an admin. Anonymous requests are unchanged.
+    """
+
+    @functools.wraps(f)
+    def require_team_if_authed_api_wrapper(*args, **kwargs):
+        if not authed():
+            return f(*args, **kwargs)
+        if not is_teams_mode():
+            return f(*args, **kwargs)
+        if is_admin():
+            return f(*args, **kwargs)
+        if get_current_team() is None:
+            abort(403)
+        return f(*args, **kwargs)
+
+    return require_team_if_authed_api_wrapper
 
 
 def ratelimit(method="POST", limit=50, interval=300, key_prefix="rl"):

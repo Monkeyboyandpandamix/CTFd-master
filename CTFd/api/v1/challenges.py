@@ -56,6 +56,7 @@ from CTFd.utils.decorators import (
     admins_only,
     authed_only,
     during_ctf_time_only,
+    require_team_if_authed_api,
     require_verified_emails,
 )
 from CTFd.utils.decorators.visibility import (
@@ -69,7 +70,6 @@ from CTFd.utils.security.signing import serialize
 from CTFd.utils.user import (
     authed,
     get_current_team,
-    get_current_team_attrs,
     get_current_user,
     get_current_user_attrs,
     get_ip,
@@ -143,17 +143,8 @@ class ChallengeList(Resource):
         },
         location="query",
     )
+    @require_team_if_authed_api
     def get(self, query_args):
-        # Require a team if in teams mode
-        # TODO: Convert this into a re-useable decorator
-        # TODO: The require_team decorator doesnt work because of no admin passthru
-        if get_current_user_attrs():
-            if is_admin():
-                pass
-            else:
-                if config.is_teams_mode() and get_current_team_attrs() is None:
-                    abort(403)
-
         # Build filtering queries
         q = query_args.pop("q", None)
         field = str(query_args.pop("field", None))
@@ -315,6 +306,7 @@ class Challenge(Resource):
             ),
         },
     )
+    @require_team_if_authed_api
     def get(self, challenge_id):
         if is_admin():
             chal = Challenges.query.filter(Challenges.id == challenge_id).first_or_404()
@@ -387,13 +379,6 @@ class Challenge(Resource):
         if authed():
             user = get_current_user()
             team = get_current_team()
-
-            # TODO: Convert this into a re-useable decorator
-            if is_admin():
-                pass
-            else:
-                if config.is_teams_mode() and team is None:
-                    abort(403)
 
             unlocked_hints = {
                 u.target
@@ -611,6 +596,7 @@ class ChallengeAttempt(Resource):
     @check_challenge_visibility
     @during_ctf_time_only
     @require_verified_emails
+    @require_team_if_authed_api
     def post(self):
         if authed() is False:
             return {"success": True, "data": {"status": "authentication_required"}}, 403
@@ -658,10 +644,6 @@ class ChallengeAttempt(Resource):
 
         user = get_current_user()
         team = get_current_team()
-
-        # TODO: Convert this into a re-useable decorator
-        if config.is_teams_mode() and team is None:
-            abort(403)
 
         challenge = Challenges.query.filter_by(id=challenge_id).first_or_404()
 
