@@ -1,0 +1,69 @@
+services:
+  juice-shop:
+    image: bkimminich/juice-shop:latest
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+
+  wrongsecrets:
+    build:
+      context: ./repos/wrongsecrets
+      dockerfile: Dockerfile.web
+      args:
+        CTF_ENABLED: "true"
+        HINTS_ENABLED: "true"
+        CTF_KEY: "local-wrongsecrets-key"
+        argBasedVersion: "local-ctfd"
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      SPRINGDOC_UI: "false"
+      SPRINGDOC_DOC: "false"
+      CTF_SERVER_ADDRESS: "http://localhost:8000"
+    ports:
+      - "8081:8080"
+
+  pico-web-css:
+    build:
+      context: ./repos/start-problem-dev/example-problems/web-css
+      args:
+        FLAG: "picoCTF{42424242}"
+    restart: unless-stopped
+    ports:
+      - "8083:80"
+
+  pico-general-ssh:
+    build:
+      context: ./repos/start-problem-dev/example-problems/general-ssh
+      args:
+        FLAG: "picoCTF{8675309}"
+        SEED: "ctfd-general-ssh"
+    restart: unless-stopped
+    ports:
+      - "2222:5555"
+
+  pico-reversing-python:
+    build:
+      context: ./repos/start-problem-dev/example-problems/reversing-python
+      args:
+        FLAG: "picoCTF{1234abcd}"
+    restart: unless-stopped
+    ports:
+      - "2223:5555"
+
+  pico-perceptron-gate:
+    build:
+      context: ./repos/start-problem-dev/example-problems/perceptron-gate
+      args:
+        FLAG: "picoCTF{deadbeef}"
+    restart: unless-stopped
+    ports:
+      - "2224:5555"
+
+  pico-artifacts:
+    image: nginx:stable
+    restart: unless-stopped
+    volumes:
+      - ./.generated/artifacts:/usr/share/nginx/html:ro
+    ports:
+      - "8084:80"

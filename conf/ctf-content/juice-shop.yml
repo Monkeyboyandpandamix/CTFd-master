@@ -1,0 +1,4 @@
+ctfFramework: CTFd
+juiceShopUrl: http://localhost:3001
+ctfKey: local-juice-shop-key
+insertHints: free
