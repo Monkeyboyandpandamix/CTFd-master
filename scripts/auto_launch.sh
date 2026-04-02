@@ -76,6 +76,13 @@ cat <<'EOF'
 
 Auto-launch completed.
 
+Optional shared-access environment variables
+- CTFD_PUBLIC_URL=https://your-host.example
+- JUICE_SHOP_URL=https://your-host.example:3001
+- WRONGSECRETS_URL=https://your-host.example:8081
+- PICO_WEB_CSS_URL=https://your-host.example:8083
+- PICO_ARTIFACTS_URL=https://your-host.example:8084/start-problem-dev
+
 Main URLs
 - CTFd: http://localhost:8000
 - Nginx: http://localhost

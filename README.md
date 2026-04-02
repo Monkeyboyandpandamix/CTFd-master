@@ -46,11 +46,15 @@ These credentials are for the current local instance. Change them before exposin
   - `pwncollege/ctf-archive`
   - `pwncollege/challenges`
 
+Those three repositories are now reviewed in-app as repository content instead of being fake-imported as invalid CTFd packs. The review page includes local path, file counts, documentation samples, and the import decision for each repo.
+
 Challenge descriptions in the current seeded catalog include local launch links where appropriate:
 
 - Juice Shop challenges link to `http://localhost:3001`
 - WrongSecrets challenges link to `http://localhost:8081`
 - picoCTF examples include their local web, SSH, netcat, or artifact endpoints directly in the description
+
+If you set `CTFD_PUBLIC_URL` and the service URL environment variables before running the build/import flow, those challenge descriptions update to shared-access URLs instead of `localhost`.
 
 ### Running The Stack
 
@@ -79,6 +83,16 @@ What it does:
 - rebuilds the merged integrated challenge CSV
 - starts the full Docker stack
 - reseeds CTFd with the current integrated content
+
+Optional shared-access environment variables before launch:
+
+```bash
+export CTFD_PUBLIC_URL="https://your-host.example"
+export JUICE_SHOP_URL="https://your-host.example:3001"
+export WRONGSECRETS_URL="https://your-host.example:8081"
+export PICO_WEB_CSS_URL="https://your-host.example:8083"
+export PICO_ARTIFACTS_URL="https://your-host.example:8084/start-problem-dev"
+```
 
 Run it from the repo root:
 
@@ -133,8 +147,9 @@ Important constraints:
 - Canvas cannot launch a localhost-only tool.
 - A public HTTPS URL is required.
 - `client_id` and `deployment_id` come from Canvas after app installation.
-- The plugin currently covers LTI 1.3 launch flow, tool JWKS, Canvas config generation, and deep linking.
-- Full grade passback and roster sync are not implemented yet.
+- The plugin now covers LTI 1.3 launch flow, tool JWKS, Canvas config generation, deep linking, optional AGS grade sync, and per-course bracket/session controls.
+- Admins can allow or block specific Canvas course IDs, auto-create brackets by Canvas course, and deactivate challenge categories, names, or IDs for selected courses without breaking the global catalog.
+- AGS grade sync is admin-controlled and pushes updated CTFd score data to Canvas only when enabled.
 
 ## Features
 

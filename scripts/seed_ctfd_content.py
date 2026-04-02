@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import csv
+from pathlib import Path
 
 from CTFd import create_app
 from CTFd.models import Admins, Challenges, Flags, Hints, Pages, Tags, db
@@ -10,6 +11,7 @@ from CTFd.utils.csv import load_challenges_csv
 
 CSV_PATH = os.environ.get("INTEGRATED_CTF_CSV", "/opt/CTFd/.generated/integrated-challenges.csv")
 RUNTIME_ENV_PATH = os.environ.get("INTEGRATED_RUNTIME_ENV", "/opt/CTFd/.generated/runtime.env")
+REPOS_ROOT = Path(os.environ.get("REVIEW_REPOS_ROOT", "/opt/CTFd/repos"))
 
 
 def load_runtime_env(path):
@@ -117,6 +119,72 @@ def sync_challenge_descriptions(path):
     db.session.commit()
 
 
+def _safe_read_text(path, limit=5000):
+    try:
+        return path.read_text(encoding="utf-8", errors="ignore")[:limit]
+    except OSError:
+        return ""
+
+
+def _repo_summary(repo_key, repo_path):
+    if not repo_path.exists():
+        return {
+            "name": repo_key,
+            "path": str(repo_path),
+            "exists": False,
+            "files": 0,
+            "directories": 0,
+            "sample": "Repository was not found in the current workspace.",
+        }
+
+    files = [path for path in repo_path.rglob("*") if path.is_file() and ".git/" not in str(path)]
+    directories = [path for path in repo_path.rglob("*") if path.is_dir() and path.name != ".git"]
+    candidate_docs = [
+        repo_path / "README.md",
+        repo_path / "DESCRIPTION.md",
+        repo_path / "README.rst",
+    ]
+    sample = ""
+    for doc in candidate_docs:
+        sample = _safe_read_text(doc)
+        if sample:
+            break
+    if not sample:
+        interesting = next((path for path in files if path.suffix in {".md", ".yml", ".yaml"}), None)
+        if interesting:
+            sample = _safe_read_text(interesting)
+
+    cleaned = "\n".join(line.strip() for line in sample.splitlines() if line.strip())[:1200]
+    return {
+        "name": repo_key,
+        "path": str(repo_path),
+        "exists": True,
+        "files": len(files),
+        "directories": len(directories),
+        "sample": cleaned or "No README-style documentation was found in the repository root.",
+    }
+
+
+def _repo_details():
+    return {
+        "apsdehal/awesome-ctf": {
+            **_repo_summary("apsdehal/awesome-ctf", REPOS_ROOT / "awesome-ctf"),
+            "review": "Curated list of external CTF resources and training sites. Useful as reference content, not as a CTFd import archive.",
+            "import_decision": "Kept as review-only content because it does not contain a normalized CTFd challenge export.",
+        },
+        "pwncollege/ctf-archive": {
+            **_repo_summary("pwncollege/ctf-archive", REPOS_ROOT / "ctf-archive"),
+            "review": "Archive of historical event content and module metadata. Valuable for review and challenge curation, but not a direct drop-in CTFd package.",
+            "import_decision": "Kept as review-only content because the content is organized as archived modules rather than a clean CTFd import set.",
+        },
+        "pwncollege/challenges": {
+            **_repo_summary("pwncollege/challenges", REPOS_ROOT / "pwncollege-challenges"),
+            "review": "Challenge monorepo with custom build, templating, and pwn.college-specific orchestration assumptions.",
+            "import_decision": "Kept as review-only content because forcing it into generic CTFd rows would break challenge semantics and runtime expectations.",
+        },
+    }
+
+
 def build_review_page(runtime):
     pico_ssh = runtime.get("PICO_GENERAL_SSH_HOST", "localhost")
     pico_ssh_port = runtime.get("PICO_GENERAL_SSH_PORT", "2222")
@@ -127,6 +195,26 @@ def build_review_page(runtime):
     juice_shop = runtime.get("JUICE_SHOP_URL", "http://localhost:3001")
     wrongsecrets = runtime.get("WRONGSECRETS_URL", "http://localhost:8081")
     pico_web = runtime.get("PICO_WEB_CSS_URL", "http://localhost:8083")
+    reviewed = _repo_details()
+    review_sections = []
+    for repo_name, details in reviewed.items():
+        review_sections.append(
+            f"""## {repo_name}
+
+- Review status: {"Present in workspace and reviewed" if details["exists"] else "Expected repo missing"}
+- Local path: `{details["path"]}`
+- File count: {details["files"]}
+- Directory count: {details["directories"]}
+- Review notes: {details["review"]}
+- Import decision: {details["import_decision"]}
+
+### Documentation sample
+
+```text
+{details["sample"]}
+```
+"""
+        )
     return f"""# Integrated Repository Review
 
 This CTFd instance was reviewed and seeded from the requested repositories with the following integration model:
@@ -156,6 +244,8 @@ This CTFd instance was reviewed and seeded from the requested repositories with 
 - `awesome-ctf`, `ctf-archive`, and `pwncollege/challenges` are not native CTFd imports, so they were reviewed and documented instead of being forced into broken challenge entries.
 - `wrongsecrets` and `juice-shop` were integrated the correct upstream way: expose the app, generate CTFd challenge CSV, then load the CSV into CTFd.
 - The picoCTF example problems were normalized into standard CTFd rows with matching runtime endpoints and flags.
+
+{"".join(review_sections)}
 """
 
 

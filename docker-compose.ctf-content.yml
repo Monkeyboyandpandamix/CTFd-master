@@ -19,7 +19,7 @@ services:
       PORT: "8080"
       SPRINGDOC_UI: "false"
       SPRINGDOC_DOC: "false"
-      CTF_SERVER_ADDRESS: "http://localhost:8000"
+      CTF_SERVER_ADDRESS: "${CTFD_PUBLIC_URL:-http://localhost:8000}"
     ports:
       - "8081:8080"
 

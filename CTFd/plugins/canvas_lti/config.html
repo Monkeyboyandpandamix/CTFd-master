@@ -94,6 +94,37 @@
               <label>Canvas JWKS URL</label>
               <input class="form-control" name="jwks_url" type="text" value="{{ jwks_url }}">
             </div>
+            <div class="form-group">
+              <label>Canvas Token URL</label>
+              <input class="form-control" name="token_url" type="text" value="{{ token_url }}">
+            </div>
+            <div class="form-group form-check">
+              <input class="form-check-input" id="ags_enabled" name="ags_enabled" type="checkbox" value="1" {% if ags_enabled %}checked{% endif %}>
+              <label class="form-check-label" for="ags_enabled">Allow Canvas AGS grade and score sync</label>
+            </div>
+            <div class="form-group form-check">
+              <input class="form-check-input" id="ags_sync_on_solve" name="ags_sync_on_solve" type="checkbox" value="1" {% if ags_sync_on_solve %}checked{% endif %}>
+              <label class="form-check-label" for="ags_sync_on_solve">Push score updates to Canvas each time a user solves a challenge</label>
+            </div>
+            <div class="form-group form-check">
+              <input class="form-check-input" id="auto_brackets_enabled" name="auto_brackets_enabled" type="checkbox" value="1" {% if auto_brackets_enabled %}checked{% endif %}>
+              <label class="form-check-label" for="auto_brackets_enabled">Auto-create and assign CTFd brackets per Canvas course</label>
+            </div>
+            <div class="form-group">
+              <label>Allowed Canvas Course IDs</label>
+              <textarea class="form-control" name="allowed_course_ids" rows="3" placeholder="Leave blank to allow all courses">{{ allowed_course_ids }}</textarea>
+              <small class="form-text text-muted">One course ID per line. If filled, only these courses may launch the tool.</small>
+            </div>
+            <div class="form-group">
+              <label>Blocked Canvas Course IDs</label>
+              <textarea class="form-control" name="blocked_course_ids" rows="3">{{ blocked_course_ids }}</textarea>
+              <small class="form-text text-muted">One course ID per line. These courses are denied even if they appear in the allowed list.</small>
+            </div>
+            <div class="form-group">
+              <label>Course Challenge Rules JSON</label>
+              <textarea class="form-control" name="course_rules_json" rows="10">{{ course_rules_json }}</textarea>
+              <small class="form-text text-muted">Use this to disable categories, challenge names, or challenge IDs for specific Canvas courses without breaking the global challenge catalog.</small>
+            </div>
             <button class="btn btn-primary" type="submit">Save Settings</button>
             <button class="btn btn-outline-secondary float-right" type="submit" name="rotate_keys" value="1">Rotate Tool Keypair</button>
           </form>
@@ -111,6 +142,7 @@
           <p><strong>OIDC Login:</strong><br><code>{{ login_url }}</code></p>
           <p><strong>LTI Launch:</strong><br><code>{{ launch_url }}</code></p>
           <p><strong>JWKS:</strong><br><code>{{ jwks_url_public }}</code></p>
+          <p><strong>Token URL:</strong><br><code>{{ token_url }}</code></p>
           <p><strong>Tool Key ID:</strong><br><code>{{ key_id }}</code></p>
         </div>
       </div>
@@ -130,6 +162,37 @@
       </div>
 
       <div class="card mb-3">
+        <div class="card-header">Shared Service Targets</div>
+        <div class="card-body">
+          <p class="mb-2">Use these values in challenge descriptions and deployment checks when multiple users are accessing the platform remotely.</p>
+          <p><strong>CTFd:</strong><br><code>{{ services.ctfd }}</code></p>
+          <p><strong>Juice Shop:</strong><br><code>{{ services.juice_shop }}</code></p>
+          <p><strong>WrongSecrets:</strong><br><code>{{ services.wrongsecrets }}</code></p>
+          <p><strong>pico Web CSS:</strong><br><code>{{ services.pico_web_css }}</code></p>
+          <p><strong>pico Artifacts:</strong><br><code>{{ services.pico_artifacts }}</code></p>
+          <p><strong>pico SSH:</strong><br><code>{{ services.pico_ssh }}</code></p>
+          <p><strong>pico Reversing:</strong><br><code>{{ services.pico_reversing }}</code></p>
+          <p><strong>pico Perceptron:</strong><br><code>{{ services.pico_perceptron }}</code></p>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header">Admin Control Summary</div>
+        <div class="card-body">
+          <p><strong>Recorded Canvas-linked accounts:</strong><br><code>{{ recent_launches | length }}</code> shown below</p>
+          <p><strong>Globally visible challenges:</strong><br><code>{{ admin_summary.global_visible_count }}</code></p>
+          <p><strong>Canvas respects admin visibility:</strong><br><code>{% if admin_summary.respects_admin_visibility %}yes{% else %}no{% endif %}</code></p>
+          <p><strong>AGS enabled:</strong><br><code>{% if admin_summary.ags_enabled %}yes{% else %}no{% endif %}</code></p>
+          <p><strong>AGS sync on solve:</strong><br><code>{% if admin_summary.ags_sync_on_solve %}yes{% else %}no{% endif %}</code></p>
+          <p><strong>Auto brackets per course:</strong><br><code>{% if admin_summary.auto_brackets_enabled %}yes{% else %}no{% endif %}</code></p>
+          <p><strong>Allowed courses:</strong><br><code>{{ admin_summary.allowed_courses | join(", ") if admin_summary.allowed_courses else "all courses allowed" }}</code></p>
+          <p><strong>Blocked courses:</strong><br><code>{{ admin_summary.blocked_courses | join(", ") if admin_summary.blocked_courses else "none" }}</code></p>
+          <p><strong>Visible challenges for first allowed course sample:</strong><br><code>{{ admin_summary.sample_course_visible_count }}</code>{% if admin_summary.sample_course_id %} for <code>{{ admin_summary.sample_course_id }}</code>{% endif %}</p>
+          <p class="mb-0">Only challenges that are already visible in CTFd and not disabled by the course rules JSON are exposed through the Canvas-backed challenge list and detail API.</p>
+        </div>
+      </div>
+
+      <div class="card mb-3">
         <div class="card-header">Generated Canvas JSON</div>
         <div class="card-body">
           <pre style="white-space: pre-wrap; max-height: 320px; overflow: auto;">{{ canvas_json }}</pre>
@@ -143,6 +206,63 @@
           <pre style="white-space: pre-wrap;">{{ last_launch | tojson(indent=2) }}</pre>
           {% else %}
           <p class="text-muted mb-0">No successful Canvas launch has been recorded yet.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-header">Latest Grade Sync</div>
+        <div class="card-body">
+          {% if latest_sync %}
+          <p><strong>Course ID:</strong> <code>{{ latest_sync.course_id or "none" }}</code></p>
+          <p><strong>Line Item:</strong><br><code>{{ latest_sync.lineitem_url or "not created yet" }}</code></p>
+          <p><strong>Last Successful Sync:</strong><br><code>{{ latest_sync.last_grade_sync or "none yet" }}</code></p>
+          <p><strong>Last Error:</strong><br><code>{{ latest_sync.last_grade_error or "none" }}</code></p>
+          {% else %}
+          <p class="text-muted mb-0">No Canvas launch context has been stored yet, so there is nothing to sync.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-header">Recent Canvas Logins And Associations</div>
+        <div class="card-body">
+          {% if recent_launches %}
+          <div style="max-height: 320px; overflow: auto;">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>CTFd User</th>
+                  <th>Canvas User</th>
+                  <th>Course</th>
+                  <th>Last Login</th>
+                  <th>Grade Sync</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for launch in recent_launches %}
+                <tr>
+                  <td>
+                    <strong>{{ launch.user_name }}</strong><br>
+                    <code>{{ launch.user_email }}</code>
+                  </td>
+                  <td><code>{{ launch.canvas_user_id or "unknown" }}</code></td>
+                  <td>
+                    <code>{{ launch.course_id or "none" }}</code><br>
+                    <small>{{ launch.context_title or "" }}</small>
+                  </td>
+                  <td><code>{{ launch.last_login_at or "none" }}</code></td>
+                  <td>
+                    <code>{{ launch.last_grade_sync or "none" }}</code><br>
+                    <small>{{ launch.last_grade_error or "" }}</small>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted mb-0">No Canvas launch has been recorded yet. Once a user launches from Canvas, the login time and Canvas identity are saved and shown here.</p>
           {% endif %}
         </div>
       </div>

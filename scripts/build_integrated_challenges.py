@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import argparse
 import csv
+import os
 import pathlib
 import zlib
+from urllib.parse import urlsplit
 
 
 HEADER = [
@@ -30,6 +32,37 @@ def append_html_link(description, label, url):
     return link_block
 
 
+def _clean_url(value):
+    value = (value or "").strip()
+    return value.rstrip("/") if value else None
+
+
+def _public_base_url():
+    return _clean_url(os.environ.get("CTFD_PUBLIC_URL"))
+
+
+def _public_host(default="localhost"):
+    base_url = _public_base_url()
+    if not base_url:
+        return default
+    return urlsplit(base_url).hostname or default
+
+
+def _service_url(env_name, default_local_url):
+    explicit = _clean_url(os.environ.get(env_name))
+    if explicit:
+        return explicit
+
+    public_base = _public_base_url()
+    if not public_base:
+        return default_local_url
+
+    split = urlsplit(default_local_url)
+    if split.port:
+        return f"{public_base.rsplit(':', 1)[0]}:{split.port}".rstrip("/")
+    return public_base
+
+
 def pico_rows():
     web_flag = "picoCTF{1n5p3t0r_ftw_42424242}"
     ssh_seed = "ctfd-general-ssh"
@@ -39,7 +72,14 @@ def pico_rows():
     perceptron_flag = "picoCTF{perceptron_party_deadbeef}"
     grep_flag = "picoCTF{gr3p_15_4_5up3rp0w3r_c001d00d}"
     disk_flag = "picoCTF{d15k_513uth_facefeed}"
-    artifacts = "http://localhost:8084/start-problem-dev"
+    artifacts = _service_url("PICO_ARTIFACTS_URL", "http://localhost:8084/start-problem-dev")
+    web_url = _service_url("PICO_WEB_CSS_URL", "http://localhost:8083")
+    ssh_host = os.environ.get("PICO_GENERAL_SSH_HOST", _public_host())
+    ssh_port = os.environ.get("PICO_GENERAL_SSH_PORT", "2222")
+    reversing_host = os.environ.get("PICO_REVERSING_PYTHON_HOST", _public_host())
+    reversing_port = os.environ.get("PICO_REVERSING_PYTHON_PORT", "2223")
+    perceptron_host = os.environ.get("PICO_PERCEPTRON_HOST", _public_host())
+    perceptron_port = os.environ.get("PICO_PERCEPTRON_PORT", "2224")
     return [
         {
             "name": "picoCTF Example: Sanity Download",
@@ -62,8 +102,8 @@ def pico_rows():
             "name": "picoCTF Example: Web CSS",
             "description": (
                 "Do you know how to use the web inspector?\n\n"
-                f'Browse the bundled service at <a href="http://localhost:8083" target="_blank" '
-                f'rel="noopener">http://localhost:8083</a> and inspect the linked CSS to find the flag.'
+                f'Browse the bundled service at <a href="{web_url}" target="_blank" '
+                f'rel="noopener">{web_url}</a> and inspect the linked CSS to find the flag.'
             ),
             "category": "picoCTF Examples",
             "value": 100,
@@ -80,7 +120,7 @@ def pico_rows():
             "description": (
                 "Do you know how to move between directories and read files in the shell?\n\n"
                 "Log in to the bundled SSH service and recover the three flag fragments.\n\n"
-                f"Connection: ssh -p 2222 ctf-player@localhost\nPassword: {ssh_password}"
+                f"Connection: ssh -p {ssh_port} ctf-player@{ssh_host}\nPassword: {ssh_password}"
             ),
             "category": "picoCTF Examples",
             "value": 100,
@@ -96,7 +136,7 @@ def pico_rows():
             "name": "picoCTF Example: Reversing Python",
             "description": (
                 "Connect to the live service with netcat and inspect the provided source file.\n\n"
-                "Service: nc localhost 2223\n\n"
+                f"Service: nc {reversing_host} {reversing_port}\n\n"
                 f'Source: <a href="{artifacts}/reversing-python/picker-I.py" '
                 f'target="_blank" rel="noopener">{artifacts}/reversing-python/picker-I.py</a>'
             ),
@@ -114,7 +154,7 @@ def pico_rows():
             "name": "picoCTF Example: Perceptron Gate",
             "description": (
                 "Probe the black-box perceptron over a socket service and submit a matching model.\n\n"
-                "Service: nc localhost 2224\n\n"
+                f"Service: nc {perceptron_host} {perceptron_port}\n\n"
                 f'Source: <a href="{artifacts}/perceptron-gate/perceptron_gate.py" '
                 f'target="_blank" rel="noopener">{artifacts}/perceptron-gate/perceptron_gate.py</a>'
             ),
@@ -177,12 +217,16 @@ def load_csv_rows(path, source_name):
     if source_name == "juice_shop":
         for row in rows:
             row["description"] = append_html_link(
-                row["description"], "Open Juice Shop", "http://localhost:3001"
+                row["description"],
+                "Open Juice Shop",
+                _service_url("JUICE_SHOP_URL", "http://localhost:3001"),
             )
     elif source_name == "wrongsecrets":
         for row in rows:
             row["description"] = append_html_link(
-                row["description"], "Open WrongSecrets", "http://localhost:8081"
+                row["description"],
+                "Open WrongSecrets",
+                _service_url("WRONGSECRETS_URL", "http://localhost:8081"),
             )
 
     return rows
@@ -214,17 +258,17 @@ def main():
     runtime_env.write_text(
         "\n".join(
             [
-                "PICO_WEB_CSS_URL=http://localhost:8083",
-                "PICO_GENERAL_SSH_HOST=localhost",
-                "PICO_GENERAL_SSH_PORT=2222",
+                f"PICO_WEB_CSS_URL={_service_url('PICO_WEB_CSS_URL', 'http://localhost:8083')}",
+                f"PICO_GENERAL_SSH_HOST={os.environ.get('PICO_GENERAL_SSH_HOST', _public_host())}",
+                f"PICO_GENERAL_SSH_PORT={os.environ.get('PICO_GENERAL_SSH_PORT', '2222')}",
                 f"PICO_GENERAL_SSH_PASSWORD={ssh_password}",
-                "PICO_REVERSING_PYTHON_HOST=localhost",
-                "PICO_REVERSING_PYTHON_PORT=2223",
-                "PICO_PERCEPTRON_HOST=localhost",
-                "PICO_PERCEPTRON_PORT=2224",
-                "PICO_ARTIFACTS_URL=http://localhost:8084/start-problem-dev",
-                "JUICE_SHOP_URL=http://localhost:3001",
-                "WRONGSECRETS_URL=http://localhost:8081",
+                f"PICO_REVERSING_PYTHON_HOST={os.environ.get('PICO_REVERSING_PYTHON_HOST', _public_host())}",
+                f"PICO_REVERSING_PYTHON_PORT={os.environ.get('PICO_REVERSING_PYTHON_PORT', '2223')}",
+                f"PICO_PERCEPTRON_HOST={os.environ.get('PICO_PERCEPTRON_HOST', _public_host())}",
+                f"PICO_PERCEPTRON_PORT={os.environ.get('PICO_PERCEPTRON_PORT', '2224')}",
+                f"PICO_ARTIFACTS_URL={_service_url('PICO_ARTIFACTS_URL', 'http://localhost:8084/start-problem-dev')}",
+                f"JUICE_SHOP_URL={_service_url('JUICE_SHOP_URL', 'http://localhost:3001')}",
+                f"WRONGSECRETS_URL={_service_url('WRONGSECRETS_URL', 'http://localhost:8081')}",
             ]
         )
         + "\n",
