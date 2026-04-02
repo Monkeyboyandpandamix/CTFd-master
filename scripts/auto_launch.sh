@@ -14,12 +14,37 @@ require_command() {
 require_command docker
 require_command python3
 require_command node
+require_command git
 
-if [ ! -f "$ROOT_DIR/repos/juice-shop-ctf/dist/bin/juice-shop-ctf.js" ]; then
-  echo "Missing juice-shop-ctf build output at repos/juice-shop-ctf/dist/bin/juice-shop-ctf.js" >&2
-  echo "Install and build the exporter first, then rerun this launcher." >&2
-  exit 1
-fi
+clone_if_missing() {
+  local url="$1"
+  local path="$2"
+  if [ -d "$path/.git" ] || [ -f "$path/.git" ]; then
+    return
+  fi
+  echo "Cloning $url into $path"
+  git clone "$url" "$path"
+}
+
+ensure_juice_shop_ctf_built() {
+  local path="$ROOT_DIR/repos/juice-shop-ctf"
+  if [ -f "$path/dist/bin/juice-shop-ctf.js" ]; then
+    return
+  fi
+  echo "Installing and building juice-shop-ctf"
+  (cd "$path" && npm install && npm run build)
+}
+
+echo "[0/5] Ensuring required content repositories exist"
+mkdir -p "$ROOT_DIR/repos"
+clone_if_missing "https://github.com/apsdehal/awesome-ctf.git" "$ROOT_DIR/repos/awesome-ctf"
+clone_if_missing "https://github.com/pwncollege/ctf-archive.git" "$ROOT_DIR/repos/ctf-archive"
+clone_if_missing "https://github.com/pwncollege/challenges.git" "$ROOT_DIR/repos/pwncollege-challenges"
+clone_if_missing "https://github.com/picoCTF/start-problem-dev.git" "$ROOT_DIR/repos/start-problem-dev"
+clone_if_missing "https://github.com/OWASP/wrongsecrets.git" "$ROOT_DIR/repos/wrongsecrets"
+clone_if_missing "https://github.com/juice-shop/juice-shop.git" "$ROOT_DIR/repos/juice-shop"
+clone_if_missing "https://github.com/juice-shop/juice-shop-ctf.git" "$ROOT_DIR/repos/juice-shop-ctf"
+ensure_juice_shop_ctf_built
 
 echo "[1/5] Generating picoCTF artifacts"
 cd "$ROOT_DIR"

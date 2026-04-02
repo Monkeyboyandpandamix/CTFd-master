@@ -72,6 +72,8 @@ This repo now includes a one-command launcher at [scripts/auto_launch.sh](/Users
 
 What it does:
 
+- clones any missing challenge source repositories into `repos/`
+- installs and builds `juice-shop-ctf` automatically if needed
 - regenerates picoCTF artifacts
 - rebuilds the Juice Shop and WrongSecrets CTF exports
 - rebuilds the merged integrated challenge CSV
@@ -205,9 +207,3 @@ To integrate with MajorLeagueCyber, simply register an account, create an event,
 OAUTH_CLIENT_ID = None
 OAUTH_CLIENT_SECRET = None
 ```
-
-## Credits
-
-- Logo by [Laura Barbera](http://www.laurabb.com/)
-- Theme by [Christopher Thompson](https://github.com/breadchris)
-- Notification Sound by [Terrence Martin](https://soundcloud.com/tj-martin-composer)
