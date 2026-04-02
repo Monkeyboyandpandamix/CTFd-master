@@ -62,6 +62,9 @@ echo "[3/5] Building integrated challenge catalog"
 python3 scripts/build_integrated_challenges.py \
   --juice-shop-csv .generated/juice-shop.csv \
   --wrongsecrets-csv .generated/wrongsecrets.csv \
+  --ctf-archive-root repos/ctf-archive \
+  --pwncollege-root repos/pwncollege-challenges \
+  --awesome-ctf-root repos/awesome-ctf \
   --output-csv .generated/integrated-challenges.csv \
   --runtime-env .generated/runtime.env
 

@@ -119,7 +119,14 @@ export default () => {
   });
 
   $(function () {
-    $("tr[data-href], td[data-href]").click(function () {
+    $("tr[data-href], td[data-href]").click(function (e) {
+      if (
+        $(e.target).closest(
+          "a, button, input, select, textarea, label, option, [data-checkbox]",
+        ).length
+      ) {
+        return true;
+      }
       var sel = getSelection().toString();
       if (!sel) {
         var href = $(this).attr("data-href");

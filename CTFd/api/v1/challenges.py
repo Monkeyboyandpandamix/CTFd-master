@@ -571,7 +571,7 @@ class Challenge(Resource):
 
         # Load data through schema for validation but not for insertion
         schema = ChallengeSchema()
-        response = schema.load(data)
+        response = schema.load(data, partial=True)
         if response.errors:
             return {"success": False, "errors": response.errors}, 400
 

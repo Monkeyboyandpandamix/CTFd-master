@@ -19,6 +19,25 @@ import NextChallenge from "../components/next/NextChallenge.vue";
 import SolutionEditor from "../components/solution/SolutionEditor.vue";
 import RatingsViewer from "../components/ratings/RatingsViewer.vue";
 
+function applyStateSelectStyle(select) {
+  $(select)
+    .removeClass("bg-success bg-danger text-white border-success border-danger");
+
+  if ($(select).val() === "visible") {
+    $(select).addClass("bg-success text-white border-success");
+  } else if ($(select).val() === "hidden") {
+    $(select).addClass("bg-danger text-white border-danger");
+  }
+}
+
+function syncChallengeStateSelects(state) {
+  $(".challenge-state-select").val(state);
+  $("#challenge-update-container select[name='state']").val(state);
+  $(".challenge-state-select").each(function () {
+    applyStateSelectStyle(this);
+  });
+}
+
 function loadChalTemplate(challenge) {
   CTFd._internal.challenge = {};
   $.getScript(CTFd.config.urlRoot + challenge.scripts.view, function () {
@@ -209,21 +228,7 @@ $(() => {
             })
             .then(function (response) {
               if (response.success) {
-                $(".challenge-state").text(response.data.state);
-                switch (response.data.state) {
-                  case "visible":
-                    $(".challenge-state")
-                      .removeClass("badge-danger")
-                      .addClass("badge-success");
-                    break;
-                  case "hidden":
-                    $(".challenge-state")
-                      .removeClass("badge-success")
-                      .addClass("badge-danger");
-                    break;
-                  default:
-                    break;
-                }
+                syncChallengeStateSelects(response.data.state);
                 ezToast({
                   title: "Success",
                   body: "Your challenge has been updated!",
@@ -254,6 +259,15 @@ $(() => {
           update_challenge();
         }
       });
+  });
+
+  $(".challenge-state-select").on("change", function () {
+    $("#challenge-update-container select[name='state']").val($(this).val());
+    applyStateSelectStyle(this);
+  });
+
+  $(".challenge-state-select").each(function () {
+    applyStateSelectStyle(this);
   });
 
   $("#challenge-create-options form").submit(handleChallengeOptions);

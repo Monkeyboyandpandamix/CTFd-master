@@ -19,7 +19,62 @@
 </div>
 <div class="container">
 	<div class="row">
-		<div class="col-md-12">
+		<div class="col-md-3">
+			<div class="card mb-3">
+				<div class="card-header">
+					Filters
+				</div>
+				<div class="card-body">
+					<form method="GET">
+						<div class="form-group">
+							<label for="sidebar-field"><b>Search Field</b></label>
+							<select id="sidebar-field" name="field" class="form-control custom-select">
+								<option value="name" {% if field == "name" or not field %}selected{% endif %}>Name</option>
+								<option value="id" {% if field == "id" %}selected{% endif %}>ID</option>
+								<option value="category" {% if field == "category" %}selected{% endif %}>Category</option>
+								<option value="type" {% if field == "type" %}selected{% endif %}>Type</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="sidebar-q"><b>Name</b></label>
+							<input id="sidebar-q" type="text" name="q" class="form-control" value="{{ q or '' }}" placeholder="Search for matching challenge">
+						</div>
+						<div class="form-group">
+							<label for="sidebar-category"><b>Category</b></label>
+							<select id="sidebar-category" name="category" class="form-control custom-select">
+								<option value="">All Categories</option>
+								{% for category_name in categories %}
+									<option value="{{ category_name }}" {% if selected_category == category_name %}selected{% endif %}>{{ category_name }}</option>
+								{% endfor %}
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="sidebar-difficulty"><b>Difficulty</b></label>
+							<select id="sidebar-difficulty" name="difficulty" class="form-control custom-select">
+								<option value="">All Difficulties</option>
+								<option value="warmup" {% if selected_difficulty == "warmup" %}selected{% endif %}>Warmup (0-100)</option>
+								<option value="easy" {% if selected_difficulty == "easy" %}selected{% endif %}>Easy (101-250)</option>
+								<option value="medium" {% if selected_difficulty == "medium" %}selected{% endif %}>Medium (251-500)</option>
+								<option value="hard" {% if selected_difficulty == "hard" %}selected{% endif %}>Hard (501-1000)</option>
+								<option value="expert" {% if selected_difficulty == "expert" %}selected{% endif %}>Expert (1000+)</option>
+							</select>
+						</div>
+						<div class="form-group">
+							<label for="sidebar-per-page"><b>Challenges Per Page</b></label>
+							<select id="sidebar-per-page" name="per_page" class="form-control custom-select">
+								<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+								<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+							</select>
+						</div>
+						<div class="form-group mb-0">
+							<button type="submit" class="btn btn-primary w-100 mb-2">Apply Filters</button>
+							<a href="{{ url_for('admin.challenges_listing') }}" class="btn btn-outline-secondary w-100">Clear Filters</a>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+		<div class="col-md-9">
 			{% if q and field %}
 			<h5 class="text-muted text-center">
 				Searching for challenges with <strong>{{ field }}</strong> matching <strong>{{ q }}</strong>
@@ -38,6 +93,9 @@
 					{{ form.q(class="form-control w-100", placeholder="Search for matching challenge") }}
 				</div>
 				<div class="form-group col-md-2">
+					<input type="hidden" name="category" value="{{ selected_category or '' }}">
+					<input type="hidden" name="difficulty" value="{{ selected_difficulty or '' }}">
+					<input type="hidden" name="per_page" value="{{ per_page }}">
 					<button type="submit" class="btn btn-primary w-100">
 						<i class="fas fa-search" aria-hidden="true"></i>
 					</button>
@@ -48,6 +106,28 @@
 	</div>
 
 	<hr>
+
+	<div class="row mb-3">
+		<div class="col-md-6">
+			<p class="text-muted mb-0">
+				Showing {{ pagination.items|length }} of {{ total }} challenges
+				(page {{ pagination.page }} of {{ pagination.pages or 1 }})
+			</p>
+		</div>
+		<div class="col-md-6">
+			<form method="GET" class="form-inline justify-content-md-end">
+				<input type="hidden" name="q" value="{{ q or '' }}">
+				<input type="hidden" name="field" value="{{ field or 'name' }}">
+				<input type="hidden" name="category" value="{{ selected_category or '' }}">
+				<input type="hidden" name="difficulty" value="{{ selected_difficulty or '' }}">
+				<label for="toolbar-per-page" class="mr-2 mb-0"><b>Per Page</b></label>
+				<select id="toolbar-per-page" name="per_page" class="form-control custom-select" onchange="this.form.submit()">
+					<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+					<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+				</select>
+			</form>
+		</div>
+	</div>
 
 	<div class="row">
 		<div class="col-md-12">
@@ -92,14 +172,20 @@
 									<input type="checkbox" class="form-check-input" value="{{ challenge.id }}" autocomplete="off" data-challenge-id="{{ challenge.id }}" data-solution-id="{{ challenge.solution_id }}">&nbsp;
 								</div>
 							</td>
-							<td class="text-center">{{ challenge.id }}</td>
+							<td class="text-center" title="Internal ID: {{ challenge.id }}">{{ display_ids.get(challenge.id, challenge.id) }}</td>
 							<td><a href="{{ url_for('admin.challenges_detail', challenge_id=challenge.id) }}">{{ challenge.name }}</a></td>
 							<td>{{ challenge.category }}</td>
 							<td class="text-center">{{ challenge.value }}</td>
 							<td class="text-center">{{ challenge.type }}</td>
 							<td class="text-center">
-								{% set badge_state = 'badge-danger' if challenge.state == 'hidden' else 'badge-success' %}
-								<span class="badge {{ badge_state }}">{{ challenge.state }}</span>
+								<select
+									class="form-control custom-select form-control-sm challenge-state-select challenge-state-{{ challenge.state }}"
+									data-challenge-id="{{ challenge.id }}"
+									style="min-width: 110px;"
+								>
+									<option value="visible" {% if challenge.state == 'visible' %}selected{% endif %}>Visible</option>
+									<option value="hidden" {% if challenge.state == 'hidden' %}selected{% endif %}>Hidden</option>
+								</select>
 							</td>
 							<td class="text-center">
 								{% if challenge.solution_id %}
@@ -120,6 +206,34 @@
 			</div>
 		</div>
 	</div>
+
+	{% if pagination.pages > 1 %}
+	<div class="row mt-3">
+		<div class="col-md-12">
+			<nav aria-label="Challenge pagination">
+				<ul class="pagination justify-content-center">
+					<li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+						<a class="page-link" href="{{ url_for('admin.challenges_listing', q=q, field=field, category=selected_category, difficulty=selected_difficulty, per_page=per_page, page=pagination.prev_num if pagination.has_prev else pagination.page) }}">Previous</a>
+					</li>
+					{% for page_number in pagination.iter_pages(left_edge=1, left_current=1, right_current=2, right_edge=1) %}
+						{% if page_number %}
+							<li class="page-item {% if page_number == pagination.page %}active{% endif %}">
+								<a class="page-link" href="{{ url_for('admin.challenges_listing', q=q, field=field, category=selected_category, difficulty=selected_difficulty, per_page=per_page, page=page_number) }}">{{ page_number }}</a>
+							</li>
+						{% else %}
+							<li class="page-item disabled">
+								<span class="page-link">…</span>
+							</li>
+						{% endif %}
+					{% endfor %}
+					<li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+						<a class="page-link" href="{{ url_for('admin.challenges_listing', q=q, field=field, category=selected_category, difficulty=selected_difficulty, per_page=per_page, page=pagination.next_num if pagination.has_next else pagination.page) }}">Next</a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+	{% endif %}
 </div>
 {% endblock %}
 

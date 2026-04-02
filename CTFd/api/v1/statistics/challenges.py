@@ -28,6 +28,7 @@ class ChallengePropertyCounts(Resource):
             # We cast this to Integer to deal with cases where SQLAlchemy will give us a Decimal instead
             data = (
                 Challenges.query.with_entities(c1, cast(aggregate_func(c2), Integer))
+                .filter(Challenges.state == "visible")
                 .group_by(c1)
                 .all()
             )
@@ -68,6 +69,7 @@ class ChallengeSolveStatistics(Resource):
                 Challenges.name,
             )
             .join(Challenges, solves_sub.columns.challenge_id == Challenges.id)
+            .filter(Challenges.state == "visible")
             .all()
         )
 
@@ -98,6 +100,7 @@ class ChallengeSolvePercentages(Resource):
                 Challenges.state,
                 Challenges.max_attempts,
             )
+            .filter(Challenges.state == "visible")
             .order_by(Challenges.value)
             .all()
         )

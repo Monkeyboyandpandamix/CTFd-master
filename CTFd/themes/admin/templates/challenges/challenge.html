@@ -70,14 +70,21 @@
 	<div class="jumbotron">
 		<div class="container">
 			<h1 class="text-center">{{ challenge.name }}</h1>
+			<h3 class="text-center text-muted">
+				Challenge ID {{ display_id }}
+				<small>(internal ID {{ challenge.id }})</small>
+			</h3>
 			<h2 class="text-center">{{ challenge.category }}</h2>
 			<h2 class="text-center">{{ challenge.type }}</h2>
-			{% set badge_state = 'badge-danger' if challenge.state == 'hidden' else 'badge-success' %}
-			<h5>
-				<span class="badge {{ badge_state }} challenge-state">
-					{{ challenge.state }}
-				</span>
-			</h5>
+			<div class="form-group mx-auto" style="max-width: 220px;">
+				<label for="challenge-state-select" class="d-block text-center mb-2">
+					State
+				</label>
+				<select id="challenge-state-select" class="form-control custom-select challenge-state-select">
+					<option value="visible" {% if challenge.state == 'visible' %}selected{% endif %}>Visible</option>
+					<option value="hidden" {% if challenge.state == 'hidden' %}selected{% endif %}>Hidden</option>
+				</select>
+			</div>
 			<h3 class="text-center">{{ challenge.value }} points</h3>
 			<div class="pt-3">
 				<a class="preview-challenge">

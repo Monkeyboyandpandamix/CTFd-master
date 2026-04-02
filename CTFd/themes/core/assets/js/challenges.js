@@ -268,10 +268,33 @@ Alpine.data("ChallengeBoard", () => ({
   loaded: false,
   challenges: [],
   challenge: null,
+  refreshHandle: null,
+  refreshIntervalMs: 15000,
 
   async init() {
     this.challenges = await CTFd.pages.challenges.getChallenges();
     this.loaded = true;
+    try {
+      const configured = parseInt(
+        CTFd.config.themeSettings?.challenge_board_refresh_ms,
+        10,
+      );
+      if (Number.isFinite(configured) && configured >= 5000) {
+        this.refreshIntervalMs = configured;
+      }
+    } catch (_error) {
+      // Keep the default refresh interval when no theme setting is provided.
+    }
+
+    this.startAutoRefresh();
+    window.addEventListener("beforeunload", () => this.stopAutoRefresh(), {
+      once: true,
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        this.loadChallenges();
+      }
+    });
 
     if (window.location.hash) {
       let chalHash = decodeURIComponent(window.location.hash.substring(1));
@@ -334,6 +357,20 @@ Alpine.data("ChallengeBoard", () => ({
 
   async loadChallenges() {
     this.challenges = await CTFd.pages.challenges.getChallenges();
+  },
+
+  startAutoRefresh() {
+    this.stopAutoRefresh();
+    this.refreshHandle = window.setInterval(() => {
+      this.loadChallenges();
+    }, this.refreshIntervalMs);
+  },
+
+  stopAutoRefresh() {
+    if (this.refreshHandle) {
+      window.clearInterval(this.refreshHandle);
+      this.refreshHandle = null;
+    }
   },
 
   async loadChallenge(challengeId) {

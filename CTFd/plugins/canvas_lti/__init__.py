@@ -186,6 +186,21 @@ def _token_url():
     return _cfg("token_url", "https://sso.canvaslms.com/login/oauth2/token")
 
 
+def _issuer():
+    return _cfg("issuer", "https://canvas.instructure.com")
+
+
+def _auth_login_url():
+    return _cfg(
+        "auth_login_url",
+        "https://sso.canvaslms.com/api/lti/authorize_redirect",
+    )
+
+
+def _canvas_jwks_url():
+    return _cfg("jwks_url", "https://sso.canvaslms.com/api/lti/security/jwks")
+
+
 def _load_private_key():
     private_pem = _cfg("private_key_pem")
     if not private_pem:
@@ -270,7 +285,7 @@ def _jwk_to_public_key(jwk):
 
 
 def _fetch_canvas_jwks():
-    jwks_url = _cfg("jwks_url")
+    jwks_url = _canvas_jwks_url()
     if not jwks_url:
         raise ValueError("Canvas JWKS URL is not configured")
     cache_key = "canvas_lti_jwks_" + hashlib.sha256(jwks_url.encode()).hexdigest()
@@ -305,7 +320,7 @@ def _verify_canvas_jwt(token, expected_nonce):
     public_key = _jwk_to_public_key(key)
     public_key.verify(signature, signing_input, padding.PKCS1v15(), hashes.SHA256())
 
-    issuer = _cfg("issuer")
+    issuer = _issuer()
     if issuer and payload.get("iss") != issuer:
         raise ValueError("Invalid LTI issuer")
 
@@ -693,8 +708,8 @@ def _setup_checks():
         },
         {
             "label": "Canvas issuer is set",
-            "ok": bool(_cfg("issuer")),
-            "value": _cfg("issuer") or "Not set",
+            "ok": bool(_issuer()),
+            "value": _issuer() or "Not set",
         },
         {
             "label": "Canvas client ID is set",
@@ -708,8 +723,8 @@ def _setup_checks():
         },
         {
             "label": "Canvas auth login URL is set",
-            "ok": bool(_cfg("auth_login_url")),
-            "value": _cfg("auth_login_url") or "Not set",
+            "ok": bool(_auth_login_url()),
+            "value": _auth_login_url() or "Not set",
         },
         {
             "label": "Canvas token URL is set",
@@ -718,8 +733,8 @@ def _setup_checks():
         },
         {
             "label": "Canvas JWKS URL is set",
-            "ok": bool(_cfg("jwks_url")),
-            "value": _cfg("jwks_url") or "Not set",
+            "ok": bool(_canvas_jwks_url()),
+            "value": _canvas_jwks_url() or "Not set",
         },
     ]
     return checks
@@ -1030,8 +1045,8 @@ def _wrap_challenge_api():
     original_get = challenge_api.Challenge.get
     original_attempt = challenge_api.ChallengeAttempt.post
 
-    def wrapped_list_get(self, query_args):
-        response = original_list_get(self, query_args)
+    def wrapped_list_get(self, *args, **kwargs):
+        response = original_list_get(self, *args, **kwargs)
         payload, status = (response[0], response[1]) if isinstance(response, tuple) else (response, None)
         if isinstance(payload, dict) and isinstance(payload.get("data"), list):
             course_id = _current_course_id()
@@ -1181,7 +1196,11 @@ def status():
     latest_launch = CanvasLTILaunch.query.order_by(CanvasLTILaunch.updated.desc()).first()
     return jsonify(
         {
-            "configured": bool(_cfg("client_id") and _cfg("issuer") and _cfg("deployment_id")),
+            "configured": bool(
+                _cfg("client_id")
+                and _cfg("deployment_id")
+                and _effective_base_url_details()["is_public_https"]
+            ),
             "login_url": _login_url(),
             "launch_url": _launch_url(),
             "jwks_url": _jwks_url(),
@@ -1212,7 +1231,7 @@ def status():
 @canvas_lti.route("/plugins/canvas_lti/login", methods=["GET", "POST"])
 @bypass_csrf_protection
 def oidc_login():
-    if not _cfg("client_id") or not _cfg("auth_login_url") or not _cfg("issuer"):
+    if not _cfg("client_id"):
         abort(503, description="Canvas LTI plugin is not configured")
 
     login_hint = request.values.get("login_hint")
@@ -1242,7 +1261,7 @@ def oidc_login():
     }
     if request.values.get("lti_message_hint"):
         params["lti_message_hint"] = request.values["lti_message_hint"]
-    return redirect(f"{_cfg('auth_login_url')}?{urlencode(params)}")
+    return redirect(f"{_auth_login_url()}?{urlencode(params)}")
 
 
 @canvas_lti.route("/plugins/canvas_lti/launch", methods=["POST"])

@@ -29,7 +29,8 @@ def statistics():
         .count()
     )
 
-    challenge_count = Challenges.query.count()
+    visible_challenges = Challenges.query.filter_by(state="visible")
+    challenge_count = visible_challenges.count()
 
     total_points = (
         Challenges.query.with_entities(db.func.sum(Challenges.value).label("sum"))
@@ -57,6 +58,7 @@ def statistics():
             Challenges.name,
         )
         .join(Challenges, solves_sub.columns.challenge_id == Challenges.id)
+        .filter(Challenges.state == "visible")
         .all()
     )
 

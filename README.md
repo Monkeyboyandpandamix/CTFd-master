@@ -41,12 +41,43 @@ These credentials are for the current local instance. Change them before exposin
 - `juice-shop/juice-shop-ctf`
 - `OWASP/wrongsecrets`
 - `picoCTF/start-problem-dev`
-- reviewed but not force-imported as broken CTFd packs:
-  - `apsdehal/awesome-ctf`
-  - `pwncollege/ctf-archive`
-  - `pwncollege/challenges`
+- `apsdehal/awesome-ctf`
+- `pwncollege/ctf-archive`
+- `pwncollege/challenges`
 
-Those three repositories are now reviewed in-app as repository content instead of being fake-imported as invalid CTFd packs. The review page includes local path, file counts, documentation samples, and the import decision for each repo.
+The additional three repositories are imported as hidden catalog entries for admin review and curation. They are not treated as fully runtime-wired challenge packs by default, but they do appear in CTFd as challenge records so admins can review, organize, and selectively publish them.
+
+### Challenge Management
+
+Current challenge behavior:
+
+- imported challenges default to `hidden`
+- admins must explicitly set a challenge to `visible` before users see it
+- Canvas visibility respects the same admin visibility controls
+- the public/user challenge board auto-refreshes, so newly visible challenges appear without a manual reload for logged-in users
+
+The admin challenge pages now use subject-based categories across all sources instead of source-prefixed categories. The current taxonomy includes:
+
+- `Authentication`
+- `Binary Exploitation`
+- `Cryptography`
+- `Forensics`
+- `Infrastructure`
+- `Machine Learning`
+- `Miscellaneous`
+- `Programming`
+- `Recon & Documentation`
+- `Resources`
+- `Reverse Engineering`
+- `Secrets & Data Exposure`
+- `Server Security`
+- `Shell`
+- `Source & CI/CD`
+- `Steganography`
+- `Warmup`
+- `Web`
+
+The admin challenge list and challenge detail page also show a sequential display ID starting at `1` and increasing through the current challenge set. This is a UI-facing numbering system only. The internal database primary key is preserved so imports, solves, flags, hints, Canvas controls, and API routes remain stable.
 
 Challenge descriptions in the current seeded catalog include local launch links where appropriate:
 

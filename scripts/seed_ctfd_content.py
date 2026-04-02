@@ -221,9 +221,9 @@ This CTFd instance was reviewed and seeded from the requested repositories with 
 
 | Repository | Review | Imported Into CTFd |
 | --- | --- | --- |
-| `apsdehal/awesome-ctf` | Curated reference list, not a native challenge pack | Reviewed on this page only |
-| `pwncollege/ctf-archive` | Archive/source repository, not a drop-in CTFd export | Reviewed on this page only |
-| `pwncollege/challenges` | Custom pwnshop + Docker monorepo with templating and encrypted private material | Reviewed on this page only |
+| `apsdehal/awesome-ctf` | Curated reference list, not a native challenge pack | Imported as hidden reference catalog entries plus reviewed on this page |
+| `pwncollege/ctf-archive` | Archive/source repository, not a drop-in CTFd export | Imported as hidden archive catalog entries plus reviewed on this page |
+| `pwncollege/challenges` | Custom pwnshop + Docker monorepo with templating and encrypted private material | Imported as hidden structured catalog entries plus reviewed on this page |
 | `picoCTF/start-problem-dev` | Challenge authoring examples | Two Docker-backed example challenges imported |
 | `OWASP/wrongsecrets` | Dockerized training target with CTF export support | Imported via generated CTFd CSV |
 | `juice-shop/juice-shop` | Dockerized training target | Imported via generated CTFd CSV |
@@ -241,7 +241,7 @@ This CTFd instance was reviewed and seeded from the requested repositories with 
 
 ## Notes
 
-- `awesome-ctf`, `ctf-archive`, and `pwncollege/challenges` are not native CTFd imports, so they were reviewed and documented instead of being forced into broken challenge entries.
+- `awesome-ctf`, `ctf-archive`, and `pwncollege/challenges` are not native drop-in CTFd exports, so they were imported as hidden catalog entries with English descriptions and admin curation notes instead of being treated as fully wired live runtimes.
 - `wrongsecrets` and `juice-shop` were integrated the correct upstream way: expose the app, generate CTFd challenge CSV, then load the CSV into CTFd.
 - The picoCTF example problems were normalized into standard CTFd rows with matching runtime endpoints and flags.
 

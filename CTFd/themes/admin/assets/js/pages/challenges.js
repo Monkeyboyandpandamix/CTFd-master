@@ -2,7 +2,24 @@ import "./main";
 import CTFd from "../compat/CTFd";
 import $ from "jquery";
 import "../compat/json";
-import { ezAlert, ezQuery } from "../compat/ezq";
+import { ezAlert, ezQuery, ezToast } from "../compat/ezq";
+
+function applyStateSelectStyle(select) {
+  $(select)
+    .removeClass("bg-success bg-danger text-white border-success border-danger");
+
+  if ($(select).val() === "visible") {
+    $(select).addClass("bg-success text-white border-success");
+  } else if ($(select).val() === "hidden") {
+    $(select).addClass("bg-danger text-white border-danger");
+  }
+}
+
+function syncStateSelect(select, state) {
+  $(select).val(state);
+  $(select).data("previous-state", state);
+  applyStateSelectStyle(select);
+}
 
 function deleteSelectedChallenges(_event) {
   let challengeIDs = $("input[data-challenge-id]:checked").map(function () {
@@ -106,7 +123,59 @@ function bulkEditChallenges(_event) {
   });
 }
 
+function updateChallengeState(event) {
+  event.stopPropagation();
+  const select = $(event.currentTarget);
+  const challengeId = select.data("challenge-id");
+  const previousState = select.data("previous-state") || select.val();
+  const state = select.val();
+
+  CTFd.fetch(`/api/v1/challenges/${challengeId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ state: state }),
+  })
+    .then((response) => response.json())
+    .then((response) => {
+      if (response.success) {
+        syncStateSelect(select, response.data.state);
+        ezToast({
+          title: "Success",
+          body: `Challenge ${challengeId} is now ${response.data.state}.`,
+        });
+      } else {
+        select.val(previousState);
+        applyStateSelectStyle(select);
+        let body = "";
+        for (const key in response.errors) {
+          body += response.errors[key].join("\n");
+          body += "\n";
+        }
+        ezAlert({
+          title: "Error",
+          body: body || "Unable to update challenge state.",
+          button: "OK",
+        });
+      }
+    })
+    .catch(() => {
+      select.val(previousState);
+      applyStateSelectStyle(select);
+      ezAlert({
+        title: "Error",
+        body: "Unable to update challenge state.",
+        button: "OK",
+      });
+    });
+}
+
 $(() => {
   $("#challenges-delete-button").click(deleteSelectedChallenges);
   $("#challenges-edit-button").click(bulkEditChallenges);
+  $(".challenge-state-select").on("click mousedown mouseup focus", function (event) {
+    event.stopPropagation();
+  });
+  $(".challenge-state-select").each(function () {
+    syncStateSelect(this, $(this).val());
+  });
+  $(".challenge-state-select").on("change", updateChallengeState);
 });
